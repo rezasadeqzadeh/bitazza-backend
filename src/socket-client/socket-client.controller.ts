@@ -8,6 +8,6 @@ export class SocketClientController {
   @Get('/status')
   @HttpCode(HttpStatus.OK)
   status() {
-    return this.socketClient.socketClient.connected;
+    return this.socketClient.ws.readyState;
   }
 }

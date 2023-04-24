@@ -1,36 +1,66 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { io, Socket } from 'socket.io-client';
+import { ConfigService } from '@nestjs/config';
+import { WebSocket } from 'ws';
 
 @Injectable()
 export class SocketClientService implements OnModuleInit {
-  public readonly socketClient: Socket;
-
-  //{
-  //   m: 0,
-  //   i: 0,
-  //   n: 'AuthenticateUser',
-  //   o: JSON.stringify({ username, password }),
-  // }
-  // wss://apibitazzastage.cdnhop.net/WSGateway
-
-  constructor() {
-    this.socketClient = io('wss://apexapi.bitazza.com/WSGateway/', {
-      transports: ['websocket'],
-    });
+  ws: WebSocket;
+  URL: string;
+  constructor(private readonly configService: ConfigService) {
+    this.URL = configService.get('app.websocket_url');
+    this.ws = new WebSocket(this.URL);
   }
+
   onModuleInit() {
-    this.socketClient.on('connect', () => {
-      console.log('websocket connected');
-    });
+    this.ws.onopen = (event) => {
+      console.log('websocket opened');
+    };
 
-    this.socketClient.emit('newMessage', { msg: 'besmellah' });
+    this.ws.onclose = (event) => {
+      console.log('websocket closed, try to reconnect');
+      this.ws = new WebSocket(this.URL);
+    };
 
-    this.socketClient.on('onMessage', (payload) => {
-      console.log('message received from server ');
-      console.log(payload);
-    });
-    this.socketClient.on('connect_error', (err) => {
-      console.log(`websocket connecting error ${err.stack}`);
-    });
+    this.ws.onerror = (event) => {
+      console.log('websocket err:', event);
+      this.ws = new WebSocket(this.URL);
+    };
+
+    this.ws.onmessage = (event) => {
+      console.log('websocket on message received:', event?.data);
+      const data = JSON.parse(event.data);
+      const n = data?.n;
+
+      switch (n) {
+        case 'AuthenticateUser':
+          console.log('AuthenticateUser resp');
+          //dispatch(handleLogin(data.o));
+          break;
+        case 'LogoutEvent':
+        case 'Logout':
+          //dispatch(handleLogout(data.o));
+          break;
+        default:
+          console.log('[this.ws.onmessage] unknown response:', data);
+      }
+    };
   }
+  getInstruments = () => {
+    const payload = {
+      OMSId: 1,
+    };
+    const frame = {
+      m: 0,
+      i: 0,
+      n: 'GetInstruments',
+      o: JSON.stringify(payload),
+    };
+
+    this.ws.send(frame);
+  };
+
+  getHistory(startDate: Date, endDate: Date) {
+    
+  }
+
 }
