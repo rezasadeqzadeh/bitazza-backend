@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
-import { TopService } from './top.service';
+import { TopService, TopType } from './top.service';
 
 @Controller('top')
 export class TopController {
@@ -7,12 +7,12 @@ export class TopController {
 
   @Get('/gainers')
   async topGainers(
+    @Query('type') type: TopType = 'gainers',
     @Query('startDate') start: number,
     @Query('endDate') end: number,
   ) {
     const startDate = new Date(Number(start));
     const endDate = new Date(Number(end));
-    const resp = await this.topService.getTopGainers(startDate, endDate);
-    return [{ name: 'BTCHTB', time: 165487554545 }];
+    return await this.topService.getTopGainers(type, startDate, endDate);
   }
 }

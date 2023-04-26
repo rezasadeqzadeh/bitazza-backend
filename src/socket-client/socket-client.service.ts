@@ -82,7 +82,7 @@ export class SocketClientService implements OnModuleInit {
         } as Instrument;
       });
       const finalList = ins.filter((item) => {
-        return item.Symbol.endsWith('THB');
+        return item.Symbol.includes('BTCTHB');
       });
       callback(finalList);
       console.log(this.instruments);
@@ -98,38 +98,50 @@ export class SocketClientService implements OnModuleInit {
     const result = {
       startDate: startDate,
       endDate: endDate,
+      instrumentsHistory: [],
     } as InstrumentsHistory;
     console.log(
       `fetching history from server, startDate: ${start} endDate: ${end}`,
     );
 
-    const requests = this.instruments.map((item) => {
-      const payload = {
-        InstrumentId: item.InstrumentId,
-        Interval: TICKER_HISTORY_INTERVAL,
-        FromDate: start,
-        ToDate: end,
-        OMSId: DEFAULT_OMSId,
-      };
-      this.sendCmd('GetTickerHistory', payload);
-      return new Promise((resolve, reject) => {
-        this.ws.on('once', (event) => {
-          const data = JSON.parse(event);
-          const n = data?.n;
-          const o: HistoryItem[] = JSON.parse(data.o);
-          console.log('data: ', data.o);
-          const instrumentHistory = {
-            instrument: item,
-            history: o,
-          } as InstrumentHistory;
-          return resolve(instrumentHistory);
+    for (const ins of this.instruments) {
+      const history = await this.getInstrumentHistory(ins, start, end);
+      result.instrumentsHistory.push(history);
+    }
+    console.log({ result });
+    return result;
+  }
+
+  async getInstrumentHistory(
+    ins: Instrument,
+    start: string,
+    end: string,
+  ): Promise<InstrumentHistory> {
+    const payload = {
+      InstrumentId: ins.InstrumentId,
+      Interval: TICKER_HISTORY_INTERVAL,
+      FromDate: start,
+      ToDate: end,
+      OMSId: DEFAULT_OMSId,
+    };
+    this.sendCmd('GetTickerHistory', payload);
+    return new Promise((resolve, reject) => {
+      this.ws.once('message', (buffer: Buffer) => {
+        const data = JSON.parse(buffer.toString());
+        const o = JSON.parse(data.o);
+        //console.log(o);
+        const histories = [] as HistoryItem[];
+        o.map((item) => {
+          histories.push({ close: item[4], time: item[0] });
         });
+        console.log('data: ', histories);
+        const instrumentHistory = {
+          instrument: ins,
+          history: histories,
+        } as InstrumentHistory;
+        return resolve(instrumentHistory);
       });
     });
-    const allPromise = Promise.all(requests);
-    const allInstrumentsHistory = await allPromise;
-    result.instrumentsHistory = allInstrumentsHistory as InstrumentHistory[];
-    return result;
   }
 
   uid = function () {
