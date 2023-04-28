@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { TICKER_HISTORY_INTERVAL, DEFAULT_OMSId } from '../const';
+import { TICKER_HISTORY_INTERVAL, DEFAULT_OMSId } from '../common/const';
 import { ConfigService } from '@nestjs/config';
 import {
   HistoryItem,
