@@ -1,0 +1,11 @@
+services:
+  # Uncomment to use redis
+  # redis:
+  #   image: redis:7-alpine
+  #   expose:
+  #     - 6379
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile

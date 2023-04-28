@@ -1,11 +1,11 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { SocketClientService } from 'src/socket-client/socket-client.service';
 import { InstrumentHistory } from './dto';
-import { TopFeatures } from './top.interface';
+import { TopServiceInt } from './top.interface';
 import { TopTypesEnum } from './top.types.enum';
 
 @Injectable()
-export class TopService implements OnModuleInit, TopFeatures {
+export class TopService implements OnModuleInit, TopServiceInt {
   constructor(public socketClient: SocketClientService) {}
 
   async onModuleInit() {}
