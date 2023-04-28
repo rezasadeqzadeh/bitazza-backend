@@ -6,7 +6,7 @@ import {
   Instrument,
   InstrumentHistory,
   InstrumentsHistory,
-} from 'src/top/top.service';
+} from 'src/top/dto';
 import { WebSocket } from 'ws';
 
 @Injectable()
@@ -81,6 +81,8 @@ export class SocketClientService implements OnModuleInit {
           Symbol: item.Symbol,
         } as Instrument;
       });
+
+      // to increase performance in test environment, enable below filter
       const finalList = ins.filter((item) => {
         return item.Symbol.includes('BTCTHB');
       });

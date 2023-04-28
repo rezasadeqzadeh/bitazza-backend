@@ -1,7 +1,12 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { SocketClientService } from './socket-client.service';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller('socket-client')
+@ApiTags('Socket Client')
+@Controller({
+  path: 'socket-client',
+  version: '1',
+})
 export class SocketClientController {
   constructor(public socketClient: SocketClientService) {}
 
