@@ -78,11 +78,12 @@ export class SocketClientService {
           throw new Error('websocket response was empty');
         }
 
-        // to increase performance in test environment, enable below filter
         const finalList = ins.filter((item) => {
-          return item.Symbol.includes('BTCTHB');
+          // reduce number instruments to speed up response time
+          //return item.Symbol.includes('BTCTHB');
+          return item.Symbol.includes('THB');
         });
-        //console.log(finalList);
+        console.log(finalList);
         resolve(finalList);
       };
     });
