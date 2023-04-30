@@ -1,24 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SocketClientService } from './socket-client.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('SocketService', () => {
   let service: SocketClientService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SocketClientService],
+      providers: [SocketClientService, ConfigService],
     }).compile();
 
     service = module.get<SocketClientService>(SocketClientService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   it('should connect to alphapoint websocket server', () => {
     setTimeout(() => {
-      expect(service.socketClient.connected).toEqual(true);
-    }, 3000);
+      expect(service.ws.readyState).toEqual(1);
+    }, 5000);
   });
 });

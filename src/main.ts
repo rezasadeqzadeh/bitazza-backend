@@ -1,4 +1,4 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { useContainer } from 'class-validator';
@@ -27,6 +27,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
+  console.log('service listening on port ', configService.get('app.port'));
   await app.listen(configService.get('app.port'));
 }
 bootstrap();

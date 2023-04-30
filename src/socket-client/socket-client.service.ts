@@ -1,45 +1,36 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { TICKER_HISTORY_INTERVAL, DEFAULT_OMSId } from '../common/const';
 import { ConfigService } from '@nestjs/config';
-import {
-  HistoryItem,
-  Instrument,
-  InstrumentHistory,
-  InstrumentsHistory,
-} from 'src/top/dto';
+import { Instrument, InstrumentHistory, InstrumentsHistory } from '../top/dto';
 import { WebSocket } from 'ws';
 
 @Injectable()
-export class SocketClientService implements OnModuleInit {
+export class SocketClientService {
   ws: WebSocket;
   URL: string;
   connected: boolean;
   instruments: Instrument[] = [];
 
   constructor(private readonly configService: ConfigService) {
+    console.log('socket client service constructor');
     this.URL = configService.get('app.websocket_url');
-  }
 
-  onModuleInit() {
-    console.log('trying to connect to  ' + this.URL);
+    //console.log('trying to connect to  ' + this.URL);
     this.ws = new WebSocket(this.URL);
-    this.ws.onopen = (event) => {
+    this.ws.onopen = async () => {
       this.connected = true;
       console.log('websocket opened');
       if (this.instruments.length == 0) {
-        this.fetchInstruments((instruments: Instrument[]) => {
-          this.instruments = instruments;
-        });
+        this.instruments = await this.fetchInstruments();
       }
     };
 
-    this.ws.onclose = (event) => {
+    this.ws.onclose = () => {
       this.connected = false;
       console.log('websocket closed, try to reconnect');
       this.ws = new WebSocket(this.URL);
     };
 
-    this.ws.onerror = (event) => {
+    this.ws.onerror = () => {
       this.connected = false;
       console.log('websocket err:', event);
       this.ws = new WebSocket(this.URL);
@@ -61,37 +52,44 @@ export class SocketClientService implements OnModuleInit {
     return requestId;
   }
 
-  fetchInstruments(callback: (instruments: Instrument[]) => void) {
+  fetchInstruments(): Promise<Instrument[]> {
+    console.log('called fetchInstrument');
     const payload = {
       OMSId: 1,
     };
     const requestId = this.sendCmd('GetInstruments', payload);
-    this.ws.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
+    return new Promise((resolve) => {
+      this.ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
 
-      // this response is not belong to us
-      if (data.i != requestId) {
-        return;
-      }
+        // this response is not belong to us
+        if (data.i != requestId) {
+          return;
+        }
 
-      const o: Instrument[] = JSON.parse(data.o);
-      const ins = o.map((item) => {
-        return {
-          InstrumentId: item.InstrumentId,
-          Symbol: item.Symbol,
-        } as Instrument;
-      });
+        const o: Instrument[] = JSON.parse(data.o);
+        const ins = o.map((item) => {
+          return {
+            InstrumentId: item.InstrumentId,
+            Symbol: item.Symbol,
+          } as Instrument;
+        });
+        if (ins === null || ins === undefined) {
+          throw new Error('websocket response was empty');
+        }
 
-      // to increase performance in test environment, enable below filter
-      const finalList = ins.filter((item) => {
-        return item.Symbol.includes('BTCTHB');
-      });
-      callback(finalList);
-      console.log(this.instruments);
-    };
+        // to increase performance in test environment, enable below filter
+        const finalList = ins.filter((item) => {
+          return item.Symbol.includes('BTCTHB');
+        });
+        //console.log(finalList);
+        resolve(finalList);
+      };
+    });
   }
 
-  async fetchHistory(
+  //Fetch all instruments histories from websocket connection by calling getInstrumentHistory()
+  async fetchAllHistories(
     startDate: Date,
     endDate: Date,
   ): Promise<InstrumentsHistory> {
@@ -102,18 +100,17 @@ export class SocketClientService implements OnModuleInit {
       endDate: endDate,
       instrumentsHistory: [],
     } as InstrumentsHistory;
-    console.log(
-      `fetching history from server, startDate: ${start} endDate: ${end}`,
-    );
-
+    // console.log(
+    //   `fetching history from server, startDate: ${start} endDate: ${end}`,
+    // );
     for (const ins of this.instruments) {
       const history = await this.getInstrumentHistory(ins, start, end);
       result.instrumentsHistory.push(history);
     }
-    console.log({ result });
     return result;
   }
 
+  //Fetch single instruments history for passed instrument from websocket connection
   async getInstrumentHistory(
     ins: Instrument,
     start: string,
@@ -121,22 +118,20 @@ export class SocketClientService implements OnModuleInit {
   ): Promise<InstrumentHistory> {
     const payload = {
       InstrumentId: ins.InstrumentId,
-      Interval: TICKER_HISTORY_INTERVAL,
+      Interval: this.configService.get('app.ticker_history_interval'),
       FromDate: start,
       ToDate: end,
-      OMSId: DEFAULT_OMSId,
+      OMSId: this.configService.get('app.default_oms_id'),
     };
     this.sendCmd('GetTickerHistory', payload);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this.ws.once('message', (buffer: Buffer) => {
         const data = JSON.parse(buffer.toString());
+        //console.log(data);
         const o = JSON.parse(data.o);
-        //console.log(o);
-        const histories = [] as HistoryItem[];
-        o.map((item) => {
-          histories.push({ close: item[4], time: item[0] });
-        });
-        console.log('data: ', histories);
+
+        const histories = o.map((item) => ({ close: item[4], time: item[0] }));
+        //console.log('data: ', histories);
         const instrumentHistory = {
           instrument: ins,
           history: histories,

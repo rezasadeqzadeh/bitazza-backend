@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsNumberString } from 'class-validator';
+import { IsNotEmpty, IsNumberString } from 'class-validator';
 import { TopTypesEnum } from '../top.types.enum';
 
 export interface Instrument {

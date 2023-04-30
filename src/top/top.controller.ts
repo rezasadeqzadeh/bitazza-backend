@@ -9,11 +9,13 @@ import { ApiTags } from '@nestjs/swagger';
   version: '1',
 })
 export class TopController {
-  constructor(public topService: TopService) {}
+  constructor(public topService: TopService) {
+    console.log('constructor top controller called.');
+  }
 
   @Get('/')
   @HttpCode(HttpStatus.OK)
-  public async topGainers(@Query() request: TopRequestDTO) {
+  public async top(@Query() request: TopRequestDTO) {
     const startDate = new Date(Number(request.startDate));
     const endDate = new Date(Number(request.endDate));
     return this.topService.topInstruments(request.type, startDate, endDate);
